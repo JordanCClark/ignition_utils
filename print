@@ -1,0 +1,34 @@
+def dataset(datasetIn, perspective=0):
+    '''
+       Points back to dataset.printDataSet (convenience path.)
+    '''
+	util.dataset.printDataSet(datasetIn)
+
+def it(message):
+    '''
+       Helper function to auto print to the console
+    '''
+    if system.tag.exists('[System]Client/User/Username'):
+        print message
+    else:
+        system.perspective.print(message)
+
+def label(strOut, printerIP = '192.168.140.61', port=9100):
+    '''
+       Helper function to send a string to a Zebra label printer
+    '''
+	from java.net import Socket
+	from java.io import DataOutputStream
+
+	try:
+	  # Open Socket Connection
+	  clientSocket=Socket(printerIP,port)
+	  #Open data output stream
+	  outToPrinter=DataOutputStream(clientSocket.getOutputStream())
+	  #Send Data to Printer
+	  outToPrinter.write(strOut)
+	  #close data stream and socket
+	  outToPrinter.close();
+	  clientSocket.close();
+	except IOError:
+	  print 'Error', row

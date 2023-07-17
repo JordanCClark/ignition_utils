@@ -1,0 +1,16 @@
+
+# Credit goes to Kyle Chase for this one.
+def getScope():
+	from com.inductiveautomation.ignition.common.model import ApplicationScope
+	scope = ApplicationScope.getGlobalScope()
+	if ApplicationScope.isClient(scope):
+		return "c"
+
+	if ApplicationScope.isDesigner(scope):
+		return "d"
+
+	if ApplicationScope.isGateway(scope):
+		if "perspective" in dir(system):
+			return "p"
+		return "g"
+	return "u"

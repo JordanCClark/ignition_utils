@@ -1,0 +1,42 @@
+def getParentWindow(component):
+	'''Get the parent windows of a Vision component
+	'''
+	from javax.swing import SwingUtilities
+	from com.inductiveautomation.factorypmi.application import FPMIWindow
+	return SwingUtilities.getAncestorOfClass(FPMIWindow, component)
+    
+def getScreens(sortX = False, sortY = False):
+	'''
+		Create a list of screen info objects on multi-monitor setups
+		
+		parameters:
+			sortX : sort screen info by X ordinate. If True, overrides sortY flag.
+			sortY : sort screen info by Y ordinate.
+		Default values return sorted by screen index.
+		
+		Attributes for each screen info object:
+			.index  : screen index
+			.width  : width of the screen
+			.height : height of the screen
+			.x      : x ordinate of the screen on the desktop
+			.y      : y ordinate of the screen on the desktop
+	'''
+	import operator
+	import java.awt.GraphicsEnvironment as GE
+	g_env = GE.getLocalGraphicsEnvironment()
+	screenDevices = g_env.getScreenDevices()
+	output = []
+	count = 0
+
+	for device in screenDevices:
+		config = device.getDefaultConfiguration()
+		bounds = config.getBounds()
+		output.append((count, bounds.width, bounds.height, bounds.x, bounds.y))
+		count += 1
+	
+	if sortY:
+		output = sorted(output, key = operator.itemgetter(4, 3))
+	if sortX:
+		output =  sorted(output, key = operator.itemgetter(3, 4))
+	return [util.object.SmartMap({'index':row[0], 'width':row[1], 'height':row[2], 'x':row[3], 'y':row[4]}) for row in output]
+    

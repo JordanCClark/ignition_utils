@@ -1,0 +1,33 @@
+def toDataSet(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None):
+	"""
+	   Function to create a dataset from an Excel spreadsheet. It will try to automatically detect the boundaries of the data,
+	   but helper parameters are available:
+	   params:
+	   		fileName   - The path to the Excel spreadsheet. (required)
+	   		hasHeaders - If true, uses the first row of the spreadsheet as column names.
+	   		sheetNum   - select the sheet to process. defaults to the first sheet.
+	   		firstRow   - select first row to process. 
+	   		lastRow    - select last row to process.
+	   		firstCol   - select first column to process
+	   		lastCol    - select last column toprocess
+	"""
+	util.dataset.fromExcel(fileName, hasHeaders, sheetNum, firstRow, lastRow, firstCol, lastCol)
+	
+def fromDataSet(dsIn, fileName = '', sheetName = 'Sheet1', dateFormat = 'yyyy-mm-dd hh:mm:ss'):
+	''' Convert a dataset to Excel
+			params:
+	    	dsIn:		The dataset to convert. Valid types are:
+	        				- com.inductiveautomation.ignition.common.BasicDataset
+							- com.inductiveautomation.ignition.common.script.builtin.DatasetUtilities$PyDataSet
+							- com.inductiveautomation.ignition.common.JsonDataset
+			fileName:	The name to save the Excel file. If omitted, the output will be a byte array.
+						This is useful to use with perspective (e.g. system.perspective.download)
+			sheetName:	The tab name of the workbook. Default is Sheet1.
+			firstRow:   Starting row for the export. Default is 0 (Row 1)
+			firstCol:   Starting column for the export. Default is 0 (Col A)
+			dateFormat:	How dates should be formatted, e.g. 'yyyy-mm-dd hh:mm:ss'. 
+			            Note that Excel does not use capital letters, because... Microsoft.
+			            The script will auto lower-case your format.       
+	'''
+	util.dataset.toExcel(dsIn, fileName, sheetName, dateFormat)
+	

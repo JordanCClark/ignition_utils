@@ -1,0 +1,8 @@
+def prepInsertQmarks(numOfGroups, groupSize):
+		''' 
+		    Generate a string of grouped question marks for prepUpdate inserts
+		    example: Generate three groups of four question marks:
+		    prepInsertQmarks(3, 4) returns (?,?,?,?),(?,?,?,?),(?,?,?,?)
+		'''
+		group = '(' + ','.join(['?'] * groupSize) + ')'
+		return ','.join([group] * numOfGroups)

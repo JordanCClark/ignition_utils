@@ -1,0 +1,223 @@
+def formatDecimalPlaces(formatIn):
+	'''Returns the number of decimal places in a number format
+		example: formatDecimalPlaces('0.0000') returns 4
+		
+		I'll be honest, I don't remember the use case I had for this.
+	'''
+	import re
+	matches = re.search('\.0+', formatIn)
+	if matches == None:
+		return 0
+	else:
+		return matches.group().count('0')
+
+class localeUtils():
+	'''Class to help facilitate conversion between java date and javascript moment.  
+	'''
+	def __init__(self):
+		self.momentToJavaDict ={
+						"d": "", # (day in week - 0=Sunday: 6=Saturday)",
+						"D": "d", # (day in month - one or two digits)",
+						"DD": "dd", # (day in month - two digits)",
+						"Do": None, # (day of month with ordinal)",
+						"Y": None, # (year - any number of digits and sign",
+						"YY": "yy", # (year - two digits)",
+						"YYYY": "yyyy", # (year - all digits)",
+						"a": None, # (am or pm)",
+						"A": "a", # (AM or PM)",
+						"M": "M", # (month in year - two digits: 01..12)",
+						"MM": "MM", # (month in year - two digits: 01..12)",
+						"MMM": "MMM", # (month in year - short text)",
+						"MMMM": "MMMM", # (month in year - full text)",
+						"h": "h", # (hour - one or two digits: 12 hours: 1..12)",
+						"hh": "hh", # (hour - two or two digits: 12 hours: 01..12)",
+						"H": "H", # (hour - one or two digits: 24 hours: 0..23)",
+						"HH": "HH", # (hour - two digits: 24 hours: 00..23)",
+						"k": "k", # (hour - one or two digits: 24 hours: 1..24)",
+						"kk": "kk", # (hour - two digits: 24 hours: 01..24)",
+						"m": "m", # (minutes - one or two digits)",
+						"mm": "mm", # (minutes - two digits)",
+						"s": "s", # (seconds - one or two digits)",
+						"ss": "ss", # (second - two digits)",
+						"S": "S", # (fractional seconds - 0...999",
+						"SS": "SS", # (fractional seconds - 00...999",
+						"SSS": "SSS", # (fractional seconds - 000...999",
+						"ddd": "E", # (day name - short)",
+						"dddd": "EEEE", # (day name - full)",
+						"DDD": "D", # (day in year)",
+						"DDDD": "DDD", # (day in year)",
+						"W": "w", # (week in year - one or two digits: 1..53)",
+						"WW": "ww", # (week in year - two digits: 01..53)",
+						"w": None, # (locale week in year - one or two digits: 1..53)",
+						"ww": None, # (locale week in year - two digits: 01..53)",
+						"ZZ": "ZZ", # (offset from UTC)",
+						"Z": "XXX", # (offset from UTC)",
+						"E": "u", # (ISO day of week - 1..7)",
+						"e": None, # (Locale day of week - 0..6)",
+						"Q": None, # (quarter in year - 1..4",
+						"X": None, # (UNIX timestamp)",
+						"x": None, # (UNIX timestamp - milliseconds)",
+						"[": "'", # (escape character)",
+						"]": "'" # (escape character)",
+					}
+		
+		self.javaToMomentDict = {
+					"d": "D", # (day in month - one or two digits)",
+					"dd": "DD", # (day in month - two digits)",
+					"D": "DDD", # (day in year - one to three digits)",
+					"DD": None, # (day in year- two or three digits)",
+					"DDD": "DDDD", # (day in year- three digits)",
+					"F": None, # (day of week in month)",
+					"y": "YYYY", # (year - every digit)",
+					"yy": "YY", # (year - two digits)",
+					"yyy": "YYYY", # (year - three digits)",
+					"yyyy": "YYYY", # (year - every digit)",
+					"Y": None, # (week year - two digits)",
+					"YY": "gg", # (week year - two digits)",
+					"YYY": None, # (week year - three digits)",
+					"YYYY": "gggg", # (week year - all digits)",
+					"a": "A", # (AM or PM)",
+					"G": None, # (era - AD or BC)",
+					"M": "M", # (month in year - two digits: 1..12)",
+					"MM": "MM", # (month in year - two digits: 01..12)",
+					"MMM": "MMM", # (month in year - short text)",
+					"MMMM": "MMMM ", # (month in year - full text)",
+					"h": "h", # (hour - one or two digits: 12 hours: 1..12)",
+					"hh": "hh", # (hour - two digits: 12 hours: 01..12)",
+					"H": "H", # (hour - one or two digits: 24 hours: 0..23)",
+					"HH": "HH", # (hour - two digits: 24 hours: 00..23)",
+					"k": "k", # (hour - one or two digits: 12 hours: 1..24)",
+					"kk": "kk", # (hour - two digits: 24 hours: 01..24)",
+					"K": None, # (hour - one or two digits: 12 hours: 0..11)",
+					"KK": None, # (hour - two digits: 12 hours: 00..11)",
+					"m": "m", # (minutes - one or two digits)",
+					"mm": "mm", # (minutes - two digits)",
+					"s": "s", # (seconds- one or two digits)",
+					"ss": "ss", # (seconds - two digits)",
+					"S": "S", # (millisecond)",
+					"SS": "SS ", # (millisecond)",
+					"SSS": "SSS ", # (millisecond)",
+					"E": "ddd", # (day name in week - short)",
+					"EE": "ddd ", # (day name in week - short)",
+					"EEE": "ddd ", # (day name in week - short)",
+					"EEEE": "dddd ", # (day name in week - full)",
+					"w": "W", # (week in year - one or two digits)",
+					"ww": "WW", # (week in year - two digits: zero-padded)",
+					"W": None, # (week in month - one or two digits)",
+					"WW": None, # (week in month - two digits: zero-padded)",
+					"z": None, # (General time zone)",
+					"zz": None, # (General time zone)",
+					"zzz": None, # (General time zone)",
+					"zzzz": None, # (General time zone)",
+					"Z": "ZZ", # (RFC 822 time zone)",
+					"X": None, # (ISO 8601 time zone -  - hours only)",
+					"XX": "ZZ", # (ISO 8601 time zone - short)",
+					"XXX": "Z", # (ISO 8601 time zone - long)",
+					"u": "E", # (day number of week - 1=Monday: 7=Sunday)",
+					"'": "[]" # (escape character)
+				}
+		
+		self.DATE_FORMAT_REGEXPS = {
+		                        "^\\d{8}$": "yyyyMMdd",
+		                        "^\\d{1:2}-\\d{1:2}-\\d{4}$": "dd-MM-yyyy",
+		                        "^\\d{4}-\\d{1:2}-\\d{1:2}$": "yyyy-MM-dd",
+		                        "^\\d{1:2}/\\d{1:2}/\\d{4}$": "MM/dd/yyyy",
+		                        "^\\d{4}/\\d{1:2}/\\d{1:2}$": "yyyy/MM/dd",
+		                        "^\\d{1:2}\\s[a-z]{3}\\s\\d{4}$": "dd MMM yyyy",
+		                        "^\\d{1:2}\\s[a-z]{4:}\\s\\d{4}$": "dd MMMM yyyy",
+		                        "^\\d{12}$": "yyyyMMddHHmm",
+		                        "^\\d{8}\\s\\d{4}$": "yyyyMMdd HHmm",
+		                        "^\\d{1:2}-\\d{1:2}-\\d{4}\\s\\d{1:2}:\\d{2}$": "dd-MM-yyyy HH:mm",
+		                        "^\\d{4}-\\d{1:2}-\\d{1:2}\\s\\d{1:2}:\\d{2}$": "yyyy-MM-dd HH:mm",
+		                        "^\\d{1:2}/\\d{1:2}/\\d{4}\\s\\d{1:2}:\\d{2}$": "MM/dd/yyyy HH:mm",
+		                        "^\\d{4}/\\d{1:2}/\\d{1:2}\\s\\d{1:2}:\\d{2}$": "yyyy/MM/dd HH:mm",
+		                        "^\\d{1:2}\\s[a-z]{3}\\s\\d{4}\\s\\d{1:2}:\\d{2}$": "dd MMM yyyy HH:mm",
+		                        "^\\d{1:2}\\s[a-z]{4:}\\s\\d{4}\\s\\d{1:2}:\\d{2}$": "dd MMMM yyyy HH:mm",
+		                        "^\\d{14}$": "yyyyMMddHHmmss",
+		                        "^\\d{8}\\s\\d{6}$": "yyyyMMdd HHmmss",
+		                        "^\\d{1:2}-\\d{1:2}-\\d{4}\\s\\d{1:2}:\\d{2}:\\d{2}$": "dd-MM-yyyy HH:mm:ss",
+		                        "^\\d{4}-\\d{1:2}-\\d{1:2}\\s\\d{1:2}:\\d{2}:\\d{2}$": "yyyy-MM-dd HH:mm:ss",
+		                        "^\\d{1:2}/\\d{1:2}/\\d{4}\\s\\d{1:2}:\\d{2}:\\d{2}$": "MM/dd/yyyy HH:mm:ss",
+		                        "^\\d{4}/\\d{1:2}/\\d{1:2}\\s\\d{1:2}:\\d{2}:\\d{2}$": "yyyy/MM/dd HH:mm:ss",
+		                        "^\\d{1:2}\\s[a-z]{3}\\s\\d{4}\\s\\d{1:2}:\\d{2}:\\d{2}$": "dd MMM yyyy HH:mm:ss",
+		                        "^\\d{1:2}\\s[a-z]{4:}\\s\\d{4}\\s\\d{1:2}:\\d{2}:\\d{2}$": "dd MMMM yyyy HH:mm:ss"
+				              }
+	
+	def determineDateFormat(self, dateString):
+		if dateString in self.DATE_FORMAT_REGEXPS.keys():
+			return self.DATE_FORMAT_REGEXPS['dateString']
+		else:
+			return None
+	
+	def autoParseDateFormat(self, dateString):
+		from java.text import DateFormat
+		from java.text import ParseException
+		from java.text import SimpleDateFormat
+		from java.util import Locale
+		#print DateFormat.getAvailableLocales()
+		for locale in DateFormat.getAvailableLocales():
+			for style in range(4):
+				print style, locale
+				try:
+					df = DateFormat.getDateTimeInstance(style, Locale(str(locale)))
+					return df.parse(dateString)
+				except Exception, e:
+					print e
+
+		format = self.determineDateFormat(dateString)
+		if format is not None:
+			df = SimpleDateFormat(format)
+			try:
+				return df.parse(dateString)
+			except ParseException, e:
+				return None
+		else:
+			return None
+	
+	def javaToMoment(self, formatString):
+		return self.translateFormat(formatString, self.javaToMomentDict, "'", "'", "[", "]")
+	
+	def momentToJava(self, formatString):
+		return self.translateFormat(formatString, self.momentToJavaDict, "[", "]", "'", "'")
+	
+	def translateFormat(self, formatString, mapping, escapeStart, escapeEnd, targetEscapeStart, targetEscapeEnd):
+		beginIndex = 0
+		i = 0
+		lastChar = 0
+		currentChar = 0
+		resultString = ''
+		esc1 = escapeStart[0]
+		esc2 = escapeEnd[0]
+		while i < len(formatString):
+			currentChar = formatString[i]
+			if i > 0 and lastChar != currentChar:
+				resultString += self.mapSubformat(formatString, mapping, beginIndex, i, escapeStart, escapeEnd, targetEscapeStart, targetEscapeEnd)
+				beginIndex = i
+			lastChar = currentChar
+			if currentChar == esc1:
+				i += 1
+				while i < len(formatSting) and formatString[i] != esc2:
+					i += 1
+				resultString += targetEscapeStart
+				resultString += formatString[beginIndex+1, i]
+				resultString += targetEscapeEnd
+				i += 1
+				if i < len(formatString):
+					lastChar = formatString[i]
+				beginIndex = i
+			i += 1
+		if beginIndex < len(formatString) and i <= len(formatString):
+			return resultString + self.mapSubformat(formatString, mapping, beginIndex, i, escapeStart, escapeEnd, targetEscapeStart, targetEscapeEnd)	
+		else:
+			return resultString
+	
+	def mapSubformat(self, formatString, mapping, beginIndex, currentIndex, escapeStart, escapeEnd, targetEscapeStart, targetEscapeEnd):
+		subformat = formatString[beginIndex:currentIndex]
+		if subformat in [escapeStart, escapeEnd]:
+			return targetEscapeStart + "(error: cannot escape escape characters)" + targetEscapeEnd
+		if subformat in mapping.keys():
+			result = mapping[subformat]
+			if result is None or len(result) == 0:
+				return targetEscapeStart + "(error: " + subformat + " cannot be converted)" + targetEscapeEnd
+			return result
+		return subformat

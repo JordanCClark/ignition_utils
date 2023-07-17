@@ -1,0 +1,21 @@
+def dump(objectIn):
+	'''
+	   Pretty print an object in a structured format
+	'''
+	import json
+	print json.dumps(objectIn, indent=4, sort_keys=False)
+
+def toDataSet(jsonIn):
+	'''Create a dataset from a flat key:value JSON string
+	'''
+	util.dataset.fromJson(jsonIn)
+
+def toArray(jsonIn):
+	''' Creates an OrderedDict from a JSON string
+	'''
+	import json
+	from collections import OrderedDict
+	
+	# Create OrderedDict from JSON
+	return json.loads(jsonIn, object_pairs_hook=OrderedDict)
+

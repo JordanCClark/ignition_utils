@@ -1,0 +1,466 @@
+def printDataSet(datasetIn):
+	from itertools import izip
+	scope = util.scope.getScope()
+	if 'PropertyTreeScriptWrapper$ArrayWrapper' in str(type(datasetIn)):
+		headers = datasetIn[0].keys()
+		data = []
+		for row in datasetIn:
+			data.append([item['value'] if 'PropertyTreeScriptWrapper$ObjectWrapper' in str(type(item)) else item for item in row.values()])
+		
+		datasetIn = system.dataset.toDataSet(headers, data)
+		
+	# Get Row and Column counts
+	nrows = datasetIn.getRowCount()
+	ncols = datasetIn.getColumnCount()
+        		        			
+	# Get max length of row labels
+	rowLen = len(max(['row']+[unicode(i) for i in range(nrows)], key=len))
+	# Get column names
+	colNames = datasetIn.getColumnNames()
+	# initialize lists to process columns
+	headerList = []
+	colData = []
+	maxLen = []
+	# Process columns
+	for i, col in izip(range(ncols), colNames):
+		# Get column as list, converting all elemenst to unicode strings
+		colIn = ([unicode(element) for element in list(datasetIn.getColumnAsList(i))])
+		# Get max lentgh of the column, including the column name
+		maxLen = len(max([col]+colIn, key=len))
+		# Append data as left justified strings.
+		# ljust() will automatically pad to the max string length
+		colData.append([element.ljust(maxLen) for element in colIn])
+		# Append column name, also using the max string length
+		headerList.append(col.ljust(maxLen))
+	# Concatenate the header string and print it.
+	headerString= 'row'.ljust(rowLen) + ' | ' + ' | '.join(headerList)
+	dividerString = '-' * len(headerString)
+	#if not perspective:
+	if scope in ('c', 'd'):
+		print headerString
+		# Print a bunch of dashes the same length as the header string
+		print dividerString
+		# Print the rows
+		for row in enumerate(izip(*colData)):
+			print unicode(row[0]).ljust(rowLen) + ' | ' + ' | '.join(row[1])
+	if scope == 'p':
+		dataOut = []
+		for row in enumerate(izip(*colData)):
+			dataOut.append(unicode(row[0]).ljust(rowLen) + ' | ' + ' | '.join(row[1]))
+		system.perspective.print('\n\n{}\n{}\n{}'.format(headerString, dividerString, '\n'.join(dataOut)))
+
+def toJson(datasetIn):
+	pass
+	pass
+
+def fromJson(jsonIn):
+	''' A helper function to convert a flat array of key-value pairs 
+    	in JSON to a dataset. Use of OrderedDict() preserves key order.
+	'''
+	import json
+	from collections import OrderedDict
+	
+	# Create OrderedDict from JSON
+	dataIn = json.loads(jsonIn, object_pairs_hook=OrderedDict)
+	# Return the dataset
+	return system.dataset.toDataSet(dataIn[0].keys(), [row.values() for row in dataIn])
+
+def toExcel(dsIn, fileName = '', sheetName = 'Sheet1', firstRow = 0, firstCol= 0, dateFormat = 'yyyy-mm-dd hh:mm:ss'):
+	''' Convert a dataset to Excel
+			params:
+	    	dsIn:		The dataset to convert. Valid types are:
+	        				- com.inductiveautomation.ignition.common.BasicDataset
+							- com.inductiveautomation.ignition.common.script.builtin.DatasetUtilities$PyDataSet
+							- com.inductiveautomation.ignition.common.JsonDataset
+			fileName:	The name to save the Excel file. If omitted, the output will be a byte array.
+						This is useful to use with perspective (e.g. system.perspective.download)
+			sheetName:	The tab name of the workbook. Default is Sheet1.
+			firstRow:   Starting row for the export. Default is 0 (Row 1)
+			firstCol:   Starting column for the export. Default is 0 (Col A)
+			dateFormat:	How dates should be formatted, e.g. 'yyyy-mm-dd hh:mm:ss'. 
+			            Note that Excel does not use capital letters, because... Microsoft.
+			            The script will auto lower-case your format.       
+	'''
+	import org.apache.poi.ss.usermodel.Cell as Cell
+	import org.apache.poi.ss.usermodel.Row as Row
+	import org.apache.poi.ss.usermodel.Sheet as Sheet
+	import org.apache.poi.ss.usermodel.Workbook as Workbook
+	import org.apache.poi.xssf.usermodel.XSSFWorkbook as XSSFWorkbook
+	import org.apache.poi.xssf.usermodel.XSSFDataFormat as XSSFDataFormat
+	from java.io import FileOutputStream, ByteArrayOutputStream
+
+	dsType = str(type(dsIn))
+	
+	# Convert to PyDataSet, if needed
+	if 'com.inductiveautomation.ignition.common.BasicDataset' in dsType:
+		pyDS = system.dataset.toPyDataSet(dsIn)
+	elif 'com.inductiveautomation.ignition.common.JsonDataset' in dsType:
+		pyDS = system.dataset.toPyDataSet(dsIn)
+	elif 'com.inductiveautomation.ignition.common.script.builtin.DatasetUtilities$PyDataSet' in dsType:
+		pyDS = dsIn
+	else:
+		raise Exception('Not a valid DataSet')
+
+	if fileName == '':
+		output = ByteArrayOutputStream()
+	else:
+		output = FileOutputStream(fileName)
+	# Create workbook
+	wb = XSSFWorkbook()
+
+	# Create Sheet
+	sheet = wb.createSheet(sheetName)
+
+	# Create formatter
+	fmt = wb.createDataFormat()
+
+	# Create style for headers
+	headerStyle = wb.createCellStyle()
+	headerFont = wb.createFont()
+	headerFont.setBold(True)
+	headerFont.setFontHeightInPoints(10)
+	headerFont.setFontName('Arial')
+	headerStyle.setFont(headerFont)
+
+	# Create style for data
+	rowStyle = wb.createCellStyle()
+	rowFont = wb.createFont()
+	rowFont.setBold(False)
+	rowFont.setFontHeightInPoints(10)
+	rowFont.setFontName('Arial')
+	rowStyle.setFont(rowFont)
+
+	# Create style for dates.
+	dateStyle = wb.createCellStyle()
+	dateFont = wb.createFont()
+	dateFont.setBold(False)
+	dateFont.setFontHeightInPoints(10)
+	dateFont.setFontName('Arial')
+	dateStyle.setFont(dateFont)
+	dateStyle.setDataFormat(fmt.getFormat(dateFormat.lower()))
+
+	# Create header row in the sheet
+	headerRow = sheet.createRow(firstRow)
+	for j, col in enumerate(pyDS.getColumnNames()):
+		cell = headerRow.createCell(j+firstCol)
+		cell.setCellStyle(headerStyle)
+		cell.setCellValue(col)
+	# Create data rows	
+	for i, row in enumerate(pyDS):
+		dataRow = sheet.createRow(i+1+firstRow)
+		for j, col in enumerate(list(row)):
+			cell = dataRow.createCell(j+firstCol)
+			cell.setCellValue(col)
+			cell.setCellStyle(rowStyle)
+			# Check if it's a date, and set cell format accordingly 
+			if 'java.util.Date' in str(type(col)):
+				cell.setCellStyle(dateStyle)
+	
+	# Resize the columns		
+	for i in range(pyDS.getColumnCount()):
+		sheet.autoSizeColumn(i)	
+
+	wb.write(output)
+	output.close()
+	if fileName == '':
+		return output.toByteArray()
+	else:
+		return 
+
+def fromExcel(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None):
+	import org.apache.poi.ss.usermodel.WorkbookFactory as WorkbookFactory
+	import org.apache.poi.ss.usermodel.DateUtil as DateUtil
+	from java.io import FileInputStream
+	from java.util import Date
+	#from com.inductiveautomation.ignition.common.function import DatasetBuilder
+	from java.lang import String, Integer, Long, Boolean, Float, Double 
+	
+	"""
+	   Function to create a dataset from an Excel spreadsheet. It will try to automatically detect the boundaries of the data,
+	   but helper parameters are available:
+	   params:
+	   		fileName   - The path to the Excel spreadsheet. (required)
+	   		hasHeaders - If true, uses the first row of the spreadsheet as column names.
+	   		sheetNum   - select the sheet to process. defaults to the first sheet.
+	   		firstRow   - select first row to process. 
+	   		lastRow    - select last row to process.
+	   		firstCol   - select first column to process
+	   		lastCol    - select last column toprocess
+	"""
+	
+	fileStream = FileInputStream(fileName)
+
+	wb = WorkbookFactory.create(fileStream)
+	
+	sheet = wb.getSheetAt(sheetNum)
+
+	if firstRow is None:
+		firstRow = sheet.getFirstRowNum()
+	if lastRow is None:
+		lastRow = sheet.getLastRowNum()
+	typeList = []
+	data = []
+	
+	for i in range(firstRow , lastRow + 1):
+		row = sheet.getRow(i)
+		#print str(i).zfill(3), list(row)
+		if i == firstRow:
+			if firstCol is None:
+				firstCol = row.getFirstCellNum()
+
+			if lastCol is None:
+				lastCol  = row.getLastCellNum()
+			else:
+				# if lastCol is specified add 1 to it.
+				lastCol += 1
+			if hasHeaders:
+				headers = list(row)[firstCol:lastCol]
+			else:
+				headers = ['Col'+str(cNum) for cNum in range(firstCol, lastCol)] 
+		rowOut = []
+		for idx, j in enumerate(range(firstCol, lastCol)):
+			if i == firstRow and hasHeaders:
+				pass
+			else:
+				cell = row.getCell(j)
+				if cell is not None:
+					cellType = cell.getCellType().toString()
+					if cellType == 'FORMULA':
+						cellType=str(cell.getCachedFormulaResultType())
+					else:
+						cellType = cell.getCellType().toString()
+					if cellType == 'NUMERIC':
+						if DateUtil.isCellDateFormatted(cell):
+							value =  cell.dateCellValue
+						else:
+							value = cell.getNumericCellValue()
+							if value == int(value):
+								value = int(value)
+					elif cellType == 'STRING':
+						value = cell.getStringCellValue()
+					elif cellType == 'BOOLEAN':
+						value = cell.getBooleanCellValue()
+					elif cellType == 'BLANK':
+						value = None	
+					else:
+						value = None
+				else:
+					value = None	
+				rowOut.append(value)
+		if len(rowOut) > 0:
+			data.append(rowOut)
+
+	fileStream.close()
+	
+	return system.dataset.toDataSet(headers, data)
+
+def fromArrayTag(tagName):
+	'''
+		Create a dataset using the name of an array tag
+		example: ArrayTag2Dataset('[Test]ArrayTag')
+		returns: row | tagName           | value  
+		         ---------------------------------
+		         0   | [Test]ArrayTag[0] | 1      
+		         1   | [Test]ArrayTag[1] | 2046   
+		         2   | [Test]ArrayTag[2] | 8675309
+		         3   | [Test]ArrayTag[3] | 42     
+		         4   | [Test]ArrayTag[4] | 73     
+	'''
+	values = system.tag.readBlocking([tagName])[0].value
+	
+	headers = ['tagName', 'value']
+	data = []
+	for i, value in enumerate(values):
+		element = tagName + '[{}]'.format(i)
+		data.append([element, value])
+	return system.dataset.toDataSet(headers, data)
+
+def listToExcel(datasetList, fileName = '', sheetNames = 'Sheet {}', dateFormat = 'yyyy-mm-dd hh:mm:ss'):
+	''' Convert a list of datasets to Excel
+			params:
+	    	datasetList:	The list of datasets to convert. Valid types are:
+	        				- com.inductiveautomation.ignition.common.BasicDataset
+							- com.inductiveautomation.ignition.common.script.builtin.DatasetUtilities$PyDataSet
+							- com.inductiveautomation.ignition.common.JsonDataset
+			fileName:	The name to save the Excel file. If omitted, the output will be a byte array.
+						This is useful to use with perspective (e.g. system.perspective.download)
+			sheetNames:	List of names The tab name of the workbook. Default is Sheet 1, Sheet 2, etc.
+			dateFormat:	How dates should be formatted, e.g. 'yyyy-mm-dd hh:mm:ss'. 
+			            Note that Excel does not use capital letters, because... Microsoft.
+			            The script will auto lower-case your format.       
+	'''
+	import org.apache.poi.ss.usermodel.Cell as Cell
+	import org.apache.poi.ss.usermodel.Row as Row
+	import org.apache.poi.ss.usermodel.Sheet as Sheet
+	import org.apache.poi.ss.usermodel.Workbook as Workbook
+	import org.apache.poi.xssf.usermodel.XSSFWorkbook as XSSFWorkbook
+	import org.apache.poi.xssf.usermodel.XSSFDataFormat as XSSFDataFormat
+	from java.io import FileOutputStream, ByteArrayOutputStream
+	
+	if fileName == '':
+		output = ByteArrayOutputStream()
+	else:
+		output = FileOutputStream(fileName)
+	# Create workbook
+	wb = XSSFWorkbook()
+	
+	for sheetIndex, dsIn in enumerate(datasetList):
+		dsType = str(type(dsIn))
+		
+		# Convert to PyDataSet, if needed
+		if 'com.inductiveautomation.ignition.common.BasicDataset' in dsType:
+			pyDS = system.dataset.toPyDataSet(dsIn)
+		elif 'com.inductiveautomation.ignition.common.JsonDataset' in dsType:
+			pyDS = system.dataset.toPyDataSet(dsIn)
+		elif 'com.inductiveautomation.ignition.common.script.builtin.DatasetUtilities$PyDataSet' in dsType:
+			pyDS = dsIn
+		else:
+			raise Exception('Not a valid DataSet')
+	
+		# Create Sheet
+		if sheetNames == 'Sheet {}':
+			sheet = wb.createSheet(sheetNames.format(sheetIndex + 1))
+		else:
+			sheet = wb.createSheet(sheetNames[sheetIndex])
+	
+		# Create formatter
+		fmt = wb.createDataFormat()
+	
+		# Create style for headers
+		headerStyle = wb.createCellStyle()
+		headerFont = wb.createFont()
+		headerFont.setBold(True)
+		headerFont.setFontHeightInPoints(10)
+		headerFont.setFontName('Arial')
+		headerStyle.setFont(headerFont)
+	
+		# Create style for data
+		rowStyle = wb.createCellStyle()
+		rowFont = wb.createFont()
+		rowFont.setBold(False)
+		rowFont.setFontHeightInPoints(10)
+		rowFont.setFontName('Arial')
+		rowStyle.setFont(rowFont)
+	
+		# Create style for dates.
+		dateStyle = wb.createCellStyle()
+		dateFont = wb.createFont()
+		dateFont.setBold(False)
+		dateFont.setFontHeightInPoints(10)
+		dateFont.setFontName('Arial')
+		dateStyle.setFont(dateFont)
+		dateStyle.setDataFormat(fmt.getFormat(dateFormat.lower()))
+	
+		# Create header row in the sheet
+		headerRow = sheet.createRow(0)
+		for i, col in enumerate(pyDS.getColumnNames()):
+			cell = headerRow.createCell(i)
+			cell.setCellStyle(headerStyle)
+			cell.setCellValue(col)
+		# Create data rows	
+		for i, row in enumerate(pyDS):
+			dataRow = sheet.createRow(i+1)
+			for j, col in enumerate(list(row)):
+				cell = dataRow.createCell(j)
+				cell.setCellValue(col)
+				cell.setCellStyle(rowStyle)
+				# Check if it's a date, and set cell format accordingly 
+				if 'java.util.Date' in str(type(col)):
+					cell.setCellStyle(dateStyle)
+		
+		# Resize the columns		
+		for i in range(pyDS.getColumnCount()):
+			sheet.autoSizeColumn(i)	
+	
+	wb.write(output)
+	output.close()
+	if fileName == '':
+		return output.toByteArray()
+	else:
+		return
+
+def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
+	''' Lookup a value in a dataset with options for exact or closest match.
+		Default options operate similar to Excel VLOOKUP function.
+	    parameters:
+		   dataIn:    dataset to perform lookup function on.
+		   lookupVal: value to look for in dataset
+		   lookupCol: column in dataset to search for lookupVal (default is 0)
+		   returnCol: column to return value from the result of the lookup (default is 1)
+		   mode:      lookup mode (default is 1)
+		      0: exact match
+		      1: nearest lower value
+		      2: nearest higher value
+		      3: nearest value higher or lower
+		returns:
+			value from dataset -or-
+			None under the following conditions:
+				- Mode 0: lookup value not in lookup list
+				- Mode 1: lookup value is lower than smallest value in lookup list
+				- Mode 2: lookup value is higher than largest value in lookup list
+				- Mode value is not between 0 and 3
+	'''
+	# Get list of possible lookupValues
+	lookupList = dataset.getColumnAsList(lookupCol)
+	# Initialize closest row value
+	closestRow = None
+	
+	if mode == 0 and lookupVal in lookupList:
+		closestRow = lookupList.index(lookupValue)
+		
+	elif mode == 1 and lookupVal >= min(lookupList):
+		closestRow = lookupList.index(max([item for item in lookupList if item <= lookupVal]))
+	
+	elif mode == 2 and lookupVal <= max(lookupList):
+		closestRow = lookupList.index(min([item for item in lookupList if item <= lookupVal]))
+	
+	elif mode == 3:
+		closestRow = lookupList.index(lookupList[min(range(len(lookupList)), key = lambda i: abs(lookupList[i]-lookupVal))])	
+	
+	if closestRow is None:
+		return None
+	else:
+		return dataIn.getValueAt(closestRow, returnCol)
+		
+def combine(dataList, commonCol = 't_stamp'):
+	''' Combine multiple datasets based on a common column
+		dataList: list of datasets
+		commonCol: column name common to all datasets	    
+	'''
+	# Convert all datsets to BasicDataset, if needed
+	for i, data in enumerate(dataList):
+		if 'com.inductiveautomation.ignition.common.BasicDataset' not in str(type(data)):
+			dataList[i] = system.dataset.toDataSet(data)
+		
+	# Create default value dictionary containing all column names
+	# with None values
+	blankValueDict = {}
+	for data in dataList:
+		colNames = list(data.getColumnNames())
+		for col in colNames:
+			if col != commonCol and col not in blankValueDict.keys():
+				blankValueDict[col] = None
+	
+	# Process the data
+	dataDict = {}
+	for data in dataList:
+		colNames = list(data.getColumnNames())
+		for i in xrange(data.rowCount):
+			commonColValue = data.getValueAt(i, commonCol)
+			if commonColValue not in dataDict.keys():
+				dataDict[commonColValue] = blankValueDict.copy()
+			for col in colNames:
+				if col != commonCol:
+					dataDict[commonColValue][col] = data.getValueAt(i, col)
+	
+	# Create combined dataset
+	headers = [commonCol] + sorted(blankValueDict.keys())
+	data = []
+	for key in sorted(dataDict.keys()):
+		newRow=[]
+		newRow.append(key)
+		for col in headers[1:]:
+			newRow.append(dataDict[key][col])
+		data.append(newRow)
+		
+	return system.dataset.toDataSet(headers, data)

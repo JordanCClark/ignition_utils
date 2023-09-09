@@ -423,9 +423,10 @@ def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
 		return dataIn.getValueAt(closestRow, returnCol)
 		
 def combine(dataList, commonCol = 't_stamp'):
+	from collections import OrderedDict, Counter
 	''' Combine multiple datasets based on a common column
 		dataList: list of datasets
-		commonCol: column name common to all datasets	    
+		commonCol: column name common to all datasets. Default is 't_stamp'	    
 	'''
 	# Convert all datsets to BasicDataset, if needed
 	for i, data in enumerate(dataList):
@@ -434,28 +435,50 @@ def combine(dataList, commonCol = 't_stamp'):
 		
 	# Create default value dictionary containing all column names
 	# with None values
-	blankValueDict = {}
-	for data in dataList:
-		colNames = list(data.getColumnNames())
-		for col in colNames:
-			if col != commonCol and col not in blankValueDict.keys():
-				blankValueDict[col] = None
+	blankValueDict = OrderedDict()
 	
-	# Process the data
-	dataDict = {}
+	# List to use with Counter to use fur a suffix, if needed
+	counterList = []
+	# Empty list of dictioaries to map incoming column names to new names in case of duplicates
+	headerLookups = []
+	
 	for data in dataList:
 		colNames = list(data.getColumnNames())
+		counterList.extend(colNames)
+		# count all the columns to find duplicates
+		counter = Counter(counterList)
+		# Dict to create map from columnName to new name
+		colDict = {}
+		for col in colNames:
+			if col != commonCol:
+				if counter[col] > 1:
+					duplicate column format string
+					formatString = '{}_{}'
+				else:
+					formatString = '{}'
+				
+				#Add mapping to dicts
+				blankValueDict[formatString.format(col, counter[col]-1)] = None
+				colDict[col] = formatString.format(col, counter[col]-1)
+		headerLookups.append(colDict)	
+
+	# Process the data
+	dataDict = OrderedDict()
+	for data, headerLookup in zip(dataList, headerLookups):
+		colNames = list(data.getColumnNames())
+		duplicateCols = []
 		for i in xrange(data.rowCount):
 			commonColValue = data.getValueAt(i, commonCol)
 			if commonColValue not in dataDict.keys():
 				dataDict[commonColValue] = blankValueDict.copy()
 			for col in colNames:
 				if col != commonCol:
-					dataDict[commonColValue][col] = data.getValueAt(i, col)
+					dataDict[commonColValue][headerLookup[col]] = data.getValueAt(i, col)
 	
 	# Create combined dataset
-	headers = [commonCol] + sorted(blankValueDict.keys())
+	headers = [commonCol] + blankValueDict.keys()
 	data = []
+	# Sort by the common key
 	for key in sorted(dataDict.keys()):
 		newRow=[]
 		newRow.append(key)

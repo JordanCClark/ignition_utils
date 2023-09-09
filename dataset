@@ -452,7 +452,7 @@ def combine(dataList, commonCol = 't_stamp'):
 		for col in colNames:
 			if col != commonCol:
 				if counter[col] > 1:
-					duplicate column format string
+					# Duplicate column format string
 					formatString = '{}_{}'
 				else:
 					formatString = '{}'

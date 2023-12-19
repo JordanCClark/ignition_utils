@@ -53,15 +53,21 @@ def toJson(datasetIn):
 	pass
 	pass
 
-def fromJson(jsonIn):
+def fromJson(jsonIn, keyPath = None):
 	''' A helper function to convert a flat array of key-value pairs 
     	in JSON to a dataset. Use of OrderedDict() preserves key order.
 	'''
-	import json
-	from collections import OrderedDict
+	dataIn = util.json.toOrderedDict(jsonIn)
+
+	if keyPath is not None:
+		return util.dataset.fromDictArray(dataIn[keyPath])
+	else:
+		return util.dataset.fromDictArray(dataIn) 
 	
-	# Create OrderedDict from JSON
-	dataIn = json.loads(jsonIn, object_pairs_hook=OrderedDict)
+def fromDictArray(dataIn):
+	''' A helper function to convert a flat array of key-value pairs 
+    	of a dictionary to a dataset.
+	'''
 	# Return the dataset
 	return system.dataset.toDataSet(dataIn[0].keys(), [row.values() for row in dataIn])
 
@@ -167,10 +173,21 @@ def toExcel(dsIn, fileName = '', sheetName = 'Sheet1', firstRow = 0, firstCol= 0
 	else:
 		return 
 
-def fromExcel(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None):
+def fromExcel(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None, pyDataSet = False):
+	from java.io import FileInputStream
+	fileStream = FileInputStream(fileName)
+	print type(fileStream)
+	return util.dataset.processExceltoDataset(fileStream, hasHeaders, sheetNum, firstRow, lastRow, firstCol, lastCol, pyDataSet)
+	
+def fromExcelBytes(bytesIn, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None, pyDataSet = False):
+	from java.io import ByteArrayInputStream
+	fileStream = ByteArrayInputStream(bytesIn)
+	return util.dataset.processExceltoDataset(fileStream, hasHeaders, sheetNum, firstRow, lastRow, firstCol, lastCol, pyDataSet)
+
+
+def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None, pyDataSet = False):
 	import org.apache.poi.ss.usermodel.WorkbookFactory as WorkbookFactory
 	import org.apache.poi.ss.usermodel.DateUtil as DateUtil
-	from java.io import FileInputStream
 	from java.util import Date
 	#from com.inductiveautomation.ignition.common.function import DatasetBuilder
 	from java.lang import String, Integer, Long, Boolean, Float, Double 
@@ -179,7 +196,7 @@ def fromExcel(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastR
 	   Function to create a dataset from an Excel spreadsheet. It will try to automatically detect the boundaries of the data,
 	   but helper parameters are available:
 	   params:
-	   		fileName   - The path to the Excel spreadsheet. (required)
+	   		fileStream - The input stream of the Excel spreadsheet. (required)
 	   		hasHeaders - If true, uses the first row of the spreadsheet as column names.
 	   		sheetNum   - select the sheet to process. defaults to the first sheet.
 	   		firstRow   - select first row to process. 
@@ -187,8 +204,6 @@ def fromExcel(fileName, hasHeaders = False, sheetNum = 0, firstRow = None, lastR
 	   		firstCol   - select first column to process
 	   		lastCol    - select last column toprocess
 	"""
-	
-	fileStream = FileInputStream(fileName)
 
 	wb = WorkbookFactory.create(fileStream)
 	

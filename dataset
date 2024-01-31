@@ -437,52 +437,67 @@ def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
 	else:
 		return dataIn.getValueAt(closestRow, returnCol)
 		
-def combine(dataList, commonCol = 't_stamp', fillNulls = False):
+def combine(dataList, commonCol = 't_stamp', fillNulls = False, jsonFormat=None):
 	''' Combine multiple datasets based on a common column
 		dataList: list of datasets
-		commonCol: column name common to all datasets	    
+		commonCol: column name common to all datasets
+		fillNulls: Use previous non-null value in creating the combined dataset
+		jsonFormat: return a json string instead of a dataset.    
 	'''
+	
+	from collections import OrderedDict
+	import json
+	
+	
 	# Convert all datsets to BasicDataset, if needed
 	for i, data in enumerate(dataList):
 		if 'com.inductiveautomation.ignition.common.BasicDataset' not in str(type(data)):
 			dataList[i] = system.dataset.toDataSet(data)
 	
-	# Create default value dictionary containing all column names
-	# with None values
-	blankValueDict = {}
-	for data in dataList:
-		colNames = list(data.getColumnNames())
-		for col in colNames:
-			if col != commonCol and col not in blankValueDict.keys():
-				blankValueDict[col] = None
-	
 	# Process the data
 	dataDict = {}
+	headers = set()
 	for data in dataList:
 		colNames = list(data.getColumnNames())
 		for i in xrange(data.rowCount):
 			commonColValue = data.getValueAt(i, commonCol)
 			if commonColValue not in dataDict.keys():
-				dataDict[commonColValue] = blankValueDict.copy()
+				dataDict[commonColValue] = {}
 			for col in colNames:
 				if col != commonCol:
+					headers.add(col)
 					dataDict[commonColValue][col] = data.getValueAt(i, col)
 	
 	# Create combined dataset
-	headers = [commonCol] + sorted(blankValueDict.keys())
+	headers = [commonCol] + sorted(headers)
 	# prevValueDict holds the last non-null values
-	prevValueDict = blankValueDict.copy()
+	prevValueDict = {key: None for key in headers[1:]}
 	data = []
 	for key in sorted(dataDict.keys()):
-		newRow=[]
-		newRow.append(key)
-		for col in headers[1:]:
-			if fillNulls:
-				if dataDict[key][col] is not None:
+		if jsonFormat:
+			newRow = OrderedDict([(commonCol,key)])
+			for col in headers[1:]:
+				value = dataDict[key].get(col)
+				if value is not None:
 					prevValueDict[col] = dataDict[key][col]
-				newRow.append(prevValueDict[col])
-			else:
-				newRow.append(dataDict[key][col]) 
+				if fillNulls:
+					newRow[col] = prevValueDict[col]
+				else:
+					newRow[col] = value 		
+		else:
+			newRow=[]
+			newRow.append(key)
+			for col in headers[1:]:
+				value = dataDict[key].get(col)
+				if value is not None:
+					prevValueDict[col] = dataDict[key][col]
+				if fillNulls:
+					newRow.append(prevValueDict[col])
+				else:
+					newRow.append(value) 
 		data.append(newRow)
-	
-	return system.dataset.toDataSet(headers, data)
+		
+	if jsonFormat:
+		return json.dumps(data)
+	else:
+		return system.dataset.toDataSet(headers, data)

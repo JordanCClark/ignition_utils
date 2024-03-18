@@ -252,7 +252,10 @@ def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow
 							if value == int(value):
 								value = int(value)
 					elif cellType == 'STRING':
-						value = cell.getStringCellValue()
+						if len(cell.getStringCellValue()) > 0:
+							value = cell.getStringCellValue()
+						else:
+							value = None
 					elif cellType == 'BOOLEAN':
 						value = cell.getBooleanCellValue()
 					elif cellType == 'BLANK':

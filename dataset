@@ -188,8 +188,8 @@ def fromExcelBytes(bytesIn, hasHeaders = False, sheetNum = 0, firstRow = None, l
 def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow = None, lastRow = None, firstCol = None, lastCol = None, pyDataSet = False):
 	import org.apache.poi.ss.usermodel.WorkbookFactory as WorkbookFactory
 	import org.apache.poi.ss.usermodel.DateUtil as DateUtil
+	from com.inductiveautomation.ignition.common.util import DatasetBuilder
 	from java.util import Date
-	#from com.inductiveautomation.ignition.common.function import DatasetBuilder
 	from java.lang import String, Integer, Long, Boolean, Float, Double 
 	
 	"""
@@ -204,6 +204,8 @@ def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow
 	   		firstCol   - select first column to process
 	   		lastCol    - select last column toprocess
 	"""
+	#print type(fileStream)
+	#fileStream = FileInputStream(fileName)
 
 	wb = WorkbookFactory.create(fileStream)
 	
@@ -213,9 +215,6 @@ def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow
 		firstRow = sheet.getFirstRowNum()
 	if lastRow is None:
 		lastRow = sheet.getLastRowNum()
-	typeList = []
-	data = []
-	
 	for i in range(firstRow , lastRow + 1):
 		row = sheet.getRow(i)
 		#print str(i).zfill(3), list(row)
@@ -228,11 +227,14 @@ def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow
 			else:
 				# if lastCol is specified add 1 to it.
 				lastCol += 1
+
+			colValues = [[] for idx in range(firstCol, lastCol)]
+			typeList = [None] * len(colValues)	
+
 			if hasHeaders:
-				headers = list(row)[firstCol:lastCol]
+				headers = [str(item) for item in list(row)[firstCol:lastCol]]
 			else:
-				headers = ['Col'+str(cNum) for cNum in range(firstCol, lastCol)] 
-		rowOut = []
+				headers = ['Col'+str(cNum) for cNum in range(firstCol, lastCol)]
 		for idx, j in enumerate(range(firstCol, lastCol)):
 			if i == firstRow and hasHeaders:
 				pass
@@ -247,30 +249,61 @@ def processExceltoDataset(fileStream, hasHeaders = False, sheetNum = 0, firstRow
 					if cellType == 'NUMERIC':
 						if DateUtil.isCellDateFormatted(cell):
 							value =  cell.dateCellValue
+							if typeList[idx] is None:
+								typeList[idx] = Date
 						else:
 							value = cell.getNumericCellValue()
-							if value == int(value):
-								value = int(value)
+							if typeList[idx] is None:
+								if value == int(value):
+									typeList[idx] = Integer
+								else:
+									typeList[idx] = Double
+							else:
+								if value != int(value):
+									if typeList[idx] == Integer:
+										typeList[idx] = Double
 					elif cellType == 'STRING':
 						if len(cell.getStringCellValue()) > 0:
 							value = cell.getStringCellValue()
+							if typeList[idx] is not String:
+								typeList[idx] = String
 						else:
 							value = None
 					elif cellType == 'BOOLEAN':
 						value = cell.getBooleanCellValue()
+						if typeList[idx] is None:
+							typeList[idx] = Boolean
 					elif cellType == 'BLANK':
 						value = None	
 					else:
 						value = None
 				else:
-					value = None	
-				rowOut.append(value)
-		if len(rowOut) > 0:
-			data.append(rowOut)
-
+					value = None
+				colValues[idx].append(value)
 	fileStream.close()
 	
-	return system.dataset.toDataSet(headers, data)
+	for i, colType in enumerate(typeList):
+		if colType is Integer:
+			colValues[i] = [int(value) for value in colValues[i]]
+		elif colType is String:
+			newCol = []
+			for col in colValues[i]:
+				if type(col) is float and col.is_integer():
+					newCol.append(unicode(int(col)))
+				else:
+					newCol.append(unicode(col))
+			colValues[i] = newCol
+	
+	builder = DatasetBuilder.newBuilder()
+	builder.colNames(headers)
+	builder.colTypes(typeList)
+	for row in zip(*colValues):
+		builder.addRow(row)
+	
+	if pyDataSet:
+		return system.dataset.toPyDataSet(builder.build())
+	else:
+		return builder.build()
 
 def fromArrayTag(tagName):
 	'''

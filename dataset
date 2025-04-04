@@ -433,17 +433,17 @@ def listToExcel(datasetList, fileName = '', sheetNames = 'Sheet {}', dateFormat 
 def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1, returnRow=False):
 	''' Lookup a value in a dataset with options for exact or closest match.
 		Default options operate similar to Excel VLOOKUP function.
-	    parameters:
+	    Args:
 		   dataIn:    dataset to perform lookup function on.
 		   lookupVal: value to look for in dataset
-		   lookupCol: column in dataset to search for lookupVal (default is 0)
-		   returnCol: column to return value from the result of the lookup (default is 1)
-		   mode:      lookup mode (default is 1)
-		      0: exact match
-		      1: nearest lower value
-		      2: nearest higher value
-		      3: nearest value higher or lower
-		returns:
+		   lookupCol: column in dataset to search for lookupVal
+		   returnCol: column to return value from the result of the lookup
+		   mode:      lookup mode
+		       0-exact match
+		       1-nearest lower value
+		       2-nearest higher value
+		       3-nearest value higher or lower
+		Returns:
 			value from dataset -or-
 			None under the following conditions:
 				- Mode 0: lookup value not in lookup list

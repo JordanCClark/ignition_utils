@@ -443,6 +443,7 @@ def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1, returnRow=F
 		       1-nearest lower value
 		       2-nearest higher value
 		       3-nearest value higher or lower
+		   returnRow: return full row instead of a single value
 		Returns:
 			value from dataset -or-
 			None under the following conditions:

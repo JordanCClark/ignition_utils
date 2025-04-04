@@ -430,7 +430,7 @@ def listToExcel(datasetList, fileName = '', sheetNames = 'Sheet {}', dateFormat 
 	else:
 		return
 
-def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
+def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1, returnRow=False):
 	''' Lookup a value in a dataset with options for exact or closest match.
 		Default options operate similar to Excel VLOOKUP function.
 	    parameters:
@@ -452,7 +452,7 @@ def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
 				- Mode value is not between 0 and 3
 	'''
 	# Get list of possible lookupValues
-	lookupList = dataset.getColumnAsList(lookupCol)
+	lookupList = dataIn.getColumnAsList(lookupCol)
 	# Initialize closest row value
 	closestRow = None
 	
@@ -470,6 +470,8 @@ def vlookup(dataIn, lookupVal, lookupCol = 0, returnCol = 1, mode=1):
 	
 	if closestRow is None:
 		return None
+	elif returnRow:
+		return [dataIn.getValueAt(closestRow, col) for col in range(dataIn.columnCount)]
 	else:
 		return dataIn.getValueAt(closestRow, returnCol)
 		

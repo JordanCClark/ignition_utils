@@ -19,3 +19,12 @@ def toArray(jsonIn):
 	# Create OrderedDict from JSON
 	return json.loads(jsonIn, object_pairs_hook=OrderedDict)
 
+def toOrderedDict(jsonIn):
+	''' A helper function to convert a flat array of key-value pairs 
+    	in JSON to an OrderedDict.
+	'''
+	import json
+	from collections import OrderedDict
+	
+	# Create OrderedDict from JSON
+	return json.loads(jsonIn, object_pairs_hook=OrderedDict)
